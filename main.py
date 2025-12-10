@@ -180,7 +180,7 @@ class MyConverter:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Конвертер учебного КЯ (Вариант 6) в TOML')
+    parser = argparse.ArgumentParser(description='Конвертер в TOML')
     parser.add_argument('-i', '--input', type=str, required=True, help='Путь к входному файлу')
     args = parser.parse_args()
 
