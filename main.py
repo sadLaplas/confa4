@@ -26,65 +26,11 @@ grammar = r"""
 """
 
 
-class ConfigTransformer(Transformer):
+class MyTransformer(Transformer):
     def __init__(self):
         super().__init__()
         self.consts = {}
         self.result = {}
-
-    def start(self, items):
-        for item in items:
-            if isinstance(item, dict):
-                self.result.update(item)
-        return self.result
-
-    def dict_entry(self, items):
-        key = str(items[0])
-        val = items[1]
-        return {key: val}
-
-    def dict(self, items):
-        res = {}
-        if items:
-            for i in items:
-                if isinstance(i, dict):
-                    res.update(i)
-        return res
-
-    def const_decl(self, items):
-        if len(items) >= 2:
-            name = str(items[0])
-            val = items[1]
-            self.consts[name] = val
-        return None
-
-    def const_expr(self, items):
-        if items and items[0] is not None:
-            return self._calc(items[0])
-        return None
-
-    def expr_items(self, items):
-        return [i for i in items if i is not None]
-
-    def _calc(self, items):
-        stack = []
-        for i in items:
-            if isinstance(i, Token) and i.type == 'NAME':
-                n = str(i)
-                if n in self.consts:
-                    stack.append(self.consts[n])
-                else:
-                    raise ValueError(f"Неизвестная константа или имя: {n}")
-
-            elif isinstance(i, Token) and i.type == 'OPERATION':
-                self._apply_op(str(i), stack)
-
-            else:
-                stack.append(i)
-
-        if len(stack) != 1:
-            raise ValueError(f"Ошибка вычисления выражения: стек не пуст или пуст {stack}")
-        return stack[0]
 
     def _apply_op(self, op, stack):
         if op in {'+', '-', '*', 'max', 'mod'}:
@@ -111,6 +57,60 @@ class ConfigTransformer(Transformer):
                 stack.append(a % b)
         else:
             raise ValueError(f"Неизвестная операция: {op}")
+
+    def _calc(self, items):
+        stack = []
+        for i in items:
+            if isinstance(i, Token) and i.type == 'NAME':
+                n = str(i)
+                if n in self.consts:
+                    stack.append(self.consts[n])
+                else:
+                    raise ValueError(f"Неизвестная константа или имя: {n}")
+
+            elif isinstance(i, Token) and i.type == 'OPERATION':
+                self._apply_op(str(i), stack)
+
+            else:
+                stack.append(i)
+
+        if len(stack) != 1:
+            raise ValueError(f"Ошибка вычисления выражения: стек не пуст или пуст {stack}")
+        return stack[0]
+
+    def start(self, items):
+        for item in items:
+            if isinstance(item, dict):
+                self.result.update(item)
+        return self.result
+
+    def dict(self, items):
+        res = {}
+        if items:
+            for i in items:
+                if isinstance(i, dict):
+                    res.update(i)
+        return res
+
+    def dict_entry(self, items):
+        key = str(items[0])
+        val = items[1]
+        return {key: val}
+
+    def const_decl(self, items):
+        if len(items) >= 2:
+            name = str(items[0])
+            val = items[1]
+            self.consts[name] = val
+        return None
+
+    def const_expr(self, items):
+        if items and items[0] is not None:
+            return self._calc(items[0])
+        return None
+
+    def expr_items(self, items):
+        return [i for i in items if i is not None]
 
     def value(self, items):
         val = items[0]
@@ -150,22 +150,12 @@ class ConfigTransformer(Transformer):
         return Token('OPERATION', str(token))
 
 
-class Converter:
+class MyConverter:
     def __init__(self):
-        self.trans = ConfigTransformer()
+        self.trans = MyTransformer()
         self.parser = Lark(grammar, parser='lalr', transformer=self.trans)
 
-    def parse_file(self, path):
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = f.read()
-            return self.parse_content(data)
-        except FileNotFoundError:
-            raise ValueError(f"Файл не найден: {path}")
-        except IOError as e:
-            raise ValueError(f"Ошибка чтения файла: {e}")
-
-    def parse_content(self, text):
+    def parse(self, text):
         text = re.sub(r'/#.*?#/', '', text, flags=re.DOTALL)
         try:
             res = self.parser.parse(text)
@@ -174,6 +164,16 @@ class Converter:
             raise ValueError(f"Синтаксическая ошибка: {e}")
         except ValueError as e:
             raise ValueError(f"Ошибка логики: {e}")
+
+    def load(self, path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = f.read()
+            return self.parse(data)
+        except FileNotFoundError:
+            raise ValueError(f"Файл не найден: {path}")
+        except IOError as e:
+            raise ValueError(f"Ошибка чтения файла: {e}")
 
     def to_toml(self, cfg):
         return toml.dumps(cfg)
@@ -185,10 +185,25 @@ def main():
     args = parser.parse_args()
 
     try:
-        conv = Converter()
-        cfg = conv.parse_file(Path(args.input))
-        print(conv.to_toml(cfg))
+        conv = MyConverter()
+        cfg = conv.load(Path(args.input))
+
+        # Получаем путь к текущему скрипту
+        script_dir = Path(__file__).parent
+
+        # Создаём имя для выходного файла на основе входного
+        input_path = Path(args.input)
+        output_name = input_path.stem + ".toml"
+        output_path = script_dir / output_name
+
+        # Сохраняем TOML в файл
+        toml_output = conv.to_toml(cfg)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(toml_output)
+
+        print(f"Конвертация успешно завершена. Файл сохранён: {output_path}")
         return 0
+
     except Exception as e:
         print(f"Ошибка: {e}", file=sys.stderr)
         return 1
