@@ -1,0 +1,8 @@
+(def port 8080)
+
+{
+  server = {
+    host = q(localhost)
+    port = $[port]
+  }
+}

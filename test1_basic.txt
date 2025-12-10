@@ -1,0 +1,5 @@
+{
+  name = q(Test App)
+  version = 1
+  count = 42
+}

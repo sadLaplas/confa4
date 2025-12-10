@@ -1,0 +1,8 @@
+(def a 20)
+(def b 3)
+
+{
+  sum = $[a b +]
+  diff = $[a b -]
+  product = $[a b *]
+}

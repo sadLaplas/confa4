@@ -1,0 +1,8 @@
+(def base 10)
+(def increment 5)
+
+{
+  addition = $[base increment +]
+  multiplication = $[base increment *]
+  subtraction = $[base increment -]
+}
