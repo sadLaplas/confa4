@@ -188,20 +188,17 @@ def main():
         conv = MyConverter()
         cfg = conv.load(Path(args.input))
 
-        # Получаем путь к текущему скрипту
         script_dir = Path(__file__).parent
 
-        # Создаём имя для выходного файла на основе входного
         input_path = Path(args.input)
         output_name = input_path.stem + ".toml"
         output_path = script_dir / output_name
 
-        # Сохраняем TOML в файл
         toml_output = conv.to_toml(cfg)
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(toml_output)
 
-        print(f"Конвертация успешно завершена. Файл сохранён: {output_path}")
+        print(f"Конвертация успешна. Файл сохранён: {output_path}")
         return 0
 
     except Exception as e:
